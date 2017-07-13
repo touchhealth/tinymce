@@ -36,26 +36,65 @@ define(
       );
     }
 
+    function alphaToNum(s) {
+      return s.replace(/^[\u00a0 ]+/, '')
+        .toUpperCase()
+        .split('')
+        .reduce(function (a, x) {
+          return a * 26 + x.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+        }, 0);
+    }
+
+    function fromRoman(s) {
+      s = s.replace(/^[\u00a0 ]+/, '').toUpperCase();
+      var translTable = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+      var i = 0, j = 1;
+      var sum = 0;
+
+      while (j < s.length) {
+        if (translTable[s[i]] < translTable[s[j]]) {
+          sum = sum + translTable[s[j]] - translTable[s[i]];
+          i += 2; j += 2;
+        } else {
+          sum = sum + translTable[s[i]];
+          i += 1; j += 1;
+        }
+      }
+
+      if (i < s.length) {
+        sum += translTable[s[i]];
+      }
+
+      return sum;
+    }
+
+    var numericPatterns = [
+      // Numeric lists
+      { regex: /^[0-9]+\.[ \u00a0]/, parse: parseInt, htmlAttrName: 'none' },
+      // Roman upper case
+      { regex: /^[IVXLMCD]{1,3}\.[ \u00a0]/, parse: fromRoman, htmlAttrName: 'I' },
+      // Roman lower case
+      { regex: /^[ivxlmcd]{1,3}\.[ \u00a0]/, parse: fromRoman, htmlAttrName: 'i' },
+      // Alphabetical a-z
+      { regex: /^[a-z]{1,2}[\.\)][ \u00a0]/, parse: alphaToNum, htmlAttrName: 'a' },
+      // Alphabetical A-Z
+      { regex: /^[A-Z]{1,2}[\.\)][ \u00a0]/, parse: alphaToNum, htmlAttrName: 'A' },
+      // Japanese
+      { regex: /^[\u3007\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d]+\.[ \u00a0]/, parse: null, htmlAttrName: null },
+      // Chinese
+      { regex: /^[\u58f1\u5f10\u53c2\u56db\u4f0d\u516d\u4e03\u516b\u4e5d\u62fe]+\.[ \u00a0]/, parse: null, htmlAttrName: null }
+    ];
+
     /**
      * Checks if the specified text starts with "1. " or "a. " etc.
      */
     function isNumericList(text) {
-      var found, patterns;
-
-      patterns = [
-        /^[IVXLMCD]{1,2}\.[ \u00a0]/,  // Roman upper case
-        /^[ivxlmcd]{1,2}\.[ \u00a0]/,  // Roman lower case
-        /^[a-z]{1,2}[\.\)][ \u00a0]/,  // Alphabetical a-z
-        /^[A-Z]{1,2}[\.\)][ \u00a0]/,  // Alphabetical A-Z
-        /^[0-9]+\.[ \u00a0]/,          // Numeric lists
-        /^[\u3007\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d]+\.[ \u00a0]/, // Japanese
-        /^[\u58f1\u5f10\u53c2\u56db\u4f0d\u516d\u4e03\u516b\u4e5d\u62fe]+\.[ \u00a0]/  // Chinese
-      ];
+      var found;
 
       text = text.replace(/^[\u00a0 ]+/, '');
 
-      Tools.each(patterns, function (pattern) {
-        if (pattern.test(text)) {
+      Tools.each(numericPatterns, function (pattern) {
+        if (pattern.regex.test(text)) {
           found = true;
           return false;
         }
@@ -139,7 +178,7 @@ define(
             }
           }
 
-          function convertParagraphToLi(paragraphNode, listName, start) {
+          function convertParagraphToLi(paragraphNode, listName, start, olType) {
             var level = paragraphNode._listLevel || lastLevel;
 
             // Handle list nesting
@@ -162,6 +201,10 @@ define(
 
               if (start > 1) {
                 currentListNode.attr('start', '' + start);
+              }
+
+              if (olType && olType != 'none') {
+                currentListNode.attr('type', olType);
               }
 
               paragraphNode.wrap(currentListNode);
@@ -214,14 +257,9 @@ define(
 
               // Detect ordered lists 1., a. or ixv.
               if (isNumericList(nodeText)) {
-                // Parse OL start number
-                var matches = /([0-9]+)\./.exec(nodeText);
-                var start = 1;
-                if (matches) {
-                  start = parseInt(matches[1], 10);
-                }
-
-                convertParagraphToLi(node, 'ol', start);
+                var start = parseOlStartNumber(nodeText);
+                var type = parseOlType(nodeText);
+                convertParagraphToLi(node, 'ol', start, type);
                 continue;
               }
 
@@ -241,6 +279,33 @@ define(
               currentListNode = null;
             }
           }
+        }
+
+        function parseOlStartNumber(nodeText) {
+          // Parse OL start number
+          nodeText = nodeText.replace(/^[\u00a0 ]+/, '');
+          var start = 1;
+          Tools.each(numericPatterns, function (pattern) {
+            if (pattern.regex.test(nodeText)) {
+              start = pattern.parse(/(.+)\.[ \u00a0]/.exec(nodeText)[1]);
+              return false;
+            }
+          });
+
+          return start;
+        }
+
+        function parseOlType(nodeText) {
+          nodeText = nodeText.replace(/^[\u00a0 ]+/, '');
+          var type = 'none';
+          Tools.each(numericPatterns, function (pattern) {
+            if (pattern.regex.test(nodeText)) {
+              type = pattern.htmlAttrName;
+              return false;
+            }
+          });
+
+          return type;
         }
 
         function filterStyles(node, styleValue) {

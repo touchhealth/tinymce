@@ -433,9 +433,9 @@ asynctest(
         editor.getContent(),
         '<ol>' +
         '<li>a' +
-        '<ol>' +
+        '<ol type="a">' +
         '<li>b' +
-        '<ol>' +
+        '<ol type="i">' +
         '<li>c</li>' +
         '</ol>' +
         '</li>' +
