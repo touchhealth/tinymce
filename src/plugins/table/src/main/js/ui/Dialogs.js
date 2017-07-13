@@ -239,11 +239,17 @@ define(
                 }
               }
             } else {
-              editor.dom.setAttribs(tableElm, {
+              var tableAttribs = {
                 border: data.border,
                 cellpadding: data.cellpadding,
                 cellspacing: data.cellspacing
-              });
+              };
+              if (editor.settings.enable_touch_customizations === true) {
+                // Support togglable table border and custom table/cell background color
+                tableAttribs['border'] = data.togglableBorder ? '1' : 0;
+                editor.dom.setStyle(tableElm, 'background-color', data.backgroundColor);
+              }
+              editor.dom.setAttribs(tableElm, tableAttribs);
             }
 
             if (dom.getAttrib(tableElm, 'width') && !editor.settings.table_style_by_css) {
@@ -317,6 +323,10 @@ define(
               caption: !!dom.select('caption', tableElm)[0],
               'class': dom.getAttrib(tableElm, 'class')
             };
+            if (editor.settings.enable_touch_customizations === true) {
+              // Support togglable table border
+              data.togglableBorder = parseInt(data.border, 10) ? true : false;
+            }
 
             each('left center right'.split(' '), function (name) {
               if (editor.formatter.matchNode(tableElm, 'align' + name)) {
@@ -402,6 +412,15 @@ define(
           ]
         };
 
+        if (editor.settings.enable_touch_customizations === true) {
+          // Support togglable table border and custom table/cell background color
+          var formItems = generalTableForm.items[0].items;
+          formItems.push({ label: 'Border', name: 'togglableBorder', type: 'checkbox' });
+          formItems.push({ label: 'Background color', type: 'colorbox', name: 'backgroundColor',
+            minWidth: 100, maxWidth: null, onaction: createColorPickAction() });
+          appendStylesToData(dom, data, tableElm);
+        }
+
         if (editor.settings.table_advtab !== false) {
           appendStylesToData(dom, data, tableElm);
 
@@ -473,6 +492,10 @@ define(
               setAttrib(cellElm, 'class', data['class']);
               setStyle(cellElm, 'width', addSizeSuffix(data.width));
               setStyle(cellElm, 'height', addSizeSuffix(data.height));
+              if (editor.settings.enable_touch_customizations === true) {
+                // Support table/cell background color
+                setStyle(cellElm, 'background-color', data.backgroundColor);
+              }
 
               // Switch cell type
               if (data.type && cellElm.nodeName.toLowerCase() !== data.type) {
@@ -648,6 +671,21 @@ define(
             classListCtrl
           ]
         };
+
+        if (editor.settings.enable_touch_customizations === true) {
+          // Prevent users from editing the td height
+          var cellItems = generalCellForm.items[0].items;
+          for (var i = 0; i < cellItems.length; i++) {
+            if (cellItems[i]['label'] === 'Height') {
+              cellItems.splice(i, 1);
+              break;
+            }
+          }
+
+          // Let users set the background color of a single cell
+          cellItems.push({ label: 'Background color', type: 'colorbox', name: 'backgroundColor',
+            minWidth: 100, maxWidth: null, onaction: createColorPickAction() });
+        }
 
         if (editor.settings.table_cell_advtab !== false) {
           editor.windowManager.open({
