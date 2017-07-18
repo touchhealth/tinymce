@@ -417,7 +417,7 @@ define(
 
             // Remove comments, scripts (e.g., msoShowComment), XML tag, VML content,
             // MS Office namespaced tags, and a few other tags
-            /<(!|script[^>]*>.*?<\/script(?=[>\s])|\/?(\?xml(:\w+)?|img|meta|link|style|\w:\w+)(?=[\s\/>]))[^>]*>/gi,
+            /<(!|script[^>]*>.*?<\/script(?=[>\s])|\/?(\?xml(:\w+)?|meta|link|style|\w:\w+)(?=[\s\/>]))[^>]*>/gi,
 
             // Convert <s> into <strike> for line-though
             [/<(\/?)s>/gi, "<$1strike>"],
@@ -505,6 +505,21 @@ define(
 
             while (i--) {
               nodes[i].remove();
+            }
+          });
+
+          // Handle image pasting
+          domParser.addNodeFilter('img', function (nodes) {
+            for (var i = 0; i < nodes.length; i++) {
+              var node = nodes[i];
+              var src = node.attr('src');
+              if (src.substring(0, 5) === 'file:') {
+                if (e.rtfImages[i] != null) {
+                  node.attr('src', 'data:image/' + e.rtfImages[i].format + ';base64,' + e.rtfImages[i].base64data);
+                } else {
+                  node.parent.remove(node);
+                }
+              }
             }
           });
 

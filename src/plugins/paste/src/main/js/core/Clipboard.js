@@ -39,9 +39,10 @@ define(
     'tinymce.plugins.paste.core.InternalHtml',
     'tinymce.plugins.paste.core.Newlines',
     'tinymce.plugins.paste.core.SmartPaste',
-    'tinymce.plugins.paste.core.Utils'
+    'tinymce.plugins.paste.core.Utils',
+    'tinymce.plugins.paste.core.RTFUtils'
   ],
-  function (RangeUtils, Env, Delay, Tools, VK, CutCopy, InternalHtml, Newlines, SmartPaste, Utils) {
+  function (RangeUtils, Env, Delay, Tools, VK, CutCopy, InternalHtml, Newlines, SmartPaste, Utils, RTFUtils) {
     return function (editor) {
       var self = this, pasteBinElm, lastRng, keyboardPasteTimeStamp = 0, draggingInternally = false;
       var pasteBinDefaultContent = '%MCEPASTEBIN%', keyboardPastePlainTextState;
@@ -62,7 +63,25 @@ define(
         internal = internalFlag || InternalHtml.isMarked(html);
         html = InternalHtml.unmark(html);
 
-        args = editor.fire('BeforePastePreProcess', { content: html, internal: internal }); // Internal event used by Quirks
+        var rtfImages = [];
+        if (editor.clipboardContent && hasContentType(editor.clipboardContent, 'text/rtf')) {
+          var rtfData = editor.clipboardContent['text/rtf'];
+          rtfImages = RTFUtils.getImagesFromRtf(rtfData);
+
+          if (editor.settings.image_validation_function) {
+            var i = 0;
+            rtfImages.forEach(function (rtfImage) {
+              var b64str = 'data:image/' + rtfImage.format + ';base64,' + rtfImage.base64data;
+              if (!editor.settings.image_validation_function(b64str)) {
+                rtfImages[i] = null;
+              }
+              ++i;
+            });
+          }
+        }
+        editor.clipboardContent = null;
+
+        args = editor.fire('BeforePastePreProcess', { content: html, internal: internal, rtfImages: rtfImages }); // Internal event used by Quirks
         args = editor.fire('PastePreProcess', args);
         html = args.content;
 
@@ -544,6 +563,7 @@ define(
           if (plainTextMode) {
             pasteText(content);
           } else {
+            editor.clipboardContent = clipboardContent;
             pasteHtml(content, internal);
           }
         }
