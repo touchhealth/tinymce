@@ -421,6 +421,9 @@ define(
        * @param {Node} node Optional node to apply the format to defaults to current selection.
        */
       function apply(name, vars, node) {
+        // Allow user to apply basic styles to non editable elements
+        var allowNonEditableStyling = ed.settings.enable_touch_customizations === true;
+
         var formatList = get(name), format = formatList[0], bookmark, rng, isCollapsed = !node && selection.isCollapsed();
 
         function setElementFormat(elm, fmt) {
@@ -536,7 +539,7 @@ define(
               parentName = node.parentNode.nodeName.toLowerCase();
 
               // Node has a contentEditable value
-              if (node.nodeType === 1 && getContentEditable(node)) {
+              if (allowNonEditableStyling || (node.nodeType === 1 && getContentEditable(node))) {
                 lastContentEditable = contentEditable;
                 contentEditable = getContentEditable(node) === "true";
                 hasContentEditableState = true; // We don't want to wrap the container only it's children
@@ -562,8 +565,9 @@ define(
 
               // Can we rename the block
               // TODO: Break this if up, too complex
-              if (contentEditable && !hasContentEditableState && format.block &&
-                !format.wrapper && isTextBlock(nodeName) && isValid(parentName, wrapName)) {
+              if ((allowNonEditableStyling || contentEditable && !hasContentEditableState) &&
+                format.block && !format.wrapper && isTextBlock(nodeName) &&
+                isValid(parentName, wrapName)) {
                 node = dom.rename(node, wrapName);
                 setElementFormat(node);
                 newWrappers.push(node);
@@ -584,7 +588,8 @@ define(
 
               // Is it valid to wrap this item
               // TODO: Break this if up, too complex
-              if (contentEditable && !hasContentEditableState && isValid(wrapName, nodeName) && isValid(parentName, wrapName) &&
+              if ((allowNonEditableStyling || contentEditable && !hasContentEditableState) &&
+                isValid(wrapName, nodeName) && isValid(parentName, wrapName) &&
                 !(!nodeSpecific && node.nodeType === 3 &&
                   node.nodeValue.length === 1 &&
                   node.nodeValue.charCodeAt(0) === 65279) &&
@@ -763,16 +768,18 @@ define(
           });
         }
 
-        if (getContentEditable(selection.getNode()) === "false") {
-          node = selection.getNode();
-          for (var i = 0, l = formatList.length; i < l; i++) {
-            if (formatList[i].ceFalseOverride && dom.is(node, formatList[i].selector)) {
-              setElementFormat(node, formatList[i]);
-              return;
+        if (!allowNonEditableStyling) {
+          if (getContentEditable(selection.getNode()) === "false") {
+            node = selection.getNode();
+            for (var i = 0, l = formatList.length; i < l; i++) {
+              if (formatList[i].ceFalseOverride && dom.is(node, formatList[i].selector)) {
+                setElementFormat(node, formatList[i]);
+                return;
+              }
             }
-          }
 
-          return;
+            return;
+          }
         }
 
         if (format) {
