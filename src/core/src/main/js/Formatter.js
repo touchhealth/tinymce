@@ -539,7 +539,7 @@ define(
               parentName = node.parentNode.nodeName.toLowerCase();
 
               // Node has a contentEditable value
-              if (allowNonEditableStyling || (node.nodeType === 1 && getContentEditable(node))) {
+              if ((nodeName != 'content-placeholder' && allowNonEditableStyling) || (node.nodeType === 1 && getContentEditable(node))) {
                 lastContentEditable = contentEditable;
                 contentEditable = getContentEditable(node) === "true";
                 hasContentEditableState = true; // We don't want to wrap the container only it's children
@@ -565,7 +565,7 @@ define(
 
               // Can we rename the block
               // TODO: Break this if up, too complex
-              if ((allowNonEditableStyling || contentEditable && !hasContentEditableState) &&
+              if (((nodeName != 'content-placeholder' && allowNonEditableStyling) || contentEditable && !hasContentEditableState) &&
                 format.block && !format.wrapper && isTextBlock(nodeName) &&
                 isValid(parentName, wrapName)) {
                 node = dom.rename(node, wrapName);
@@ -588,7 +588,7 @@ define(
 
               // Is it valid to wrap this item
               // TODO: Break this if up, too complex
-              if ((allowNonEditableStyling || contentEditable && !hasContentEditableState) &&
+              if (((nodeName != 'content-placeholder' && allowNonEditableStyling) || contentEditable && !hasContentEditableState) &&
                 isValid(wrapName, nodeName) && isValid(parentName, wrapName) &&
                 !(!nodeSpecific && node.nodeType === 3 &&
                   node.nodeValue.length === 1 &&
@@ -604,7 +604,7 @@ define(
                 }
 
                 currentWrapElm.appendChild(node);
-              } else {
+              } else if (nodeName != 'content-placeholder') {
                 // Start a new wrapper for possible children
                 currentWrapElm = 0;
 
