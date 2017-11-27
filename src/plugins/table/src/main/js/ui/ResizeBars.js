@@ -753,8 +753,9 @@ define(
         var newHeights = [], newTotalHeight = 0;
 
         for (var i = 0; i < heights.length; i++) {
-          newHeights.push(i === index ? delta + heights[i] : heights[i]);
-          newTotalHeight += newTotalHeight[i];
+          var h = (i === index) ? delta + heights[i] : heights[i];
+          newHeights.push(h);
+          newTotalHeight += h;
         }
 
         var newCellSizes = recalculateCellHeights(tableGrid, newHeights);
@@ -924,24 +925,40 @@ define(
         editor.dom.bind(getBody(), 'mousedown', mouseDownHandler);
       });
 
+      editor.on('ObjectResizeStart', function (e) {
+        function resizePercentage(table) {
+          Tools.each(table.rows, function (row) {
+            var rowHeight = editor.dom.getSize(row);
+            Tools.each(row.cells, function (cell) {
+              var tableSizes = editor.dom.getSize(table);
+              var cellSizes = editor.dom.getSize(cell);
+              var cellPercentages = {
+                h: (cellSizes.h || rowHeight) * 100 / tableSizes.h,
+                w: cellSizes.w * 100 / tableSizes.w
+              };
+              editor.dom.setStyle(row, 'height', cellPercentages.h.toFixed(2) + '%');
+              editor.dom.setAttrib(row, 'height', null);
+              editor.dom.setStyle(cell, 'width', cellPercentages.w.toFixed(2) + '%');
+              editor.dom.setAttrib(cell, 'width', null);
+              editor.dom.setStyle(cell, 'height', cellPercentages.h.toFixed(2) + '%');
+              editor.dom.setAttrib(cell, 'height', null);
+            });
+          });
+        }
+        var table = e.target;
+        if (table.nodeName === 'TABLE') {
+          var tableClone = editor.dom.select('table.mce-clonedresizable')[0];
+          resizePercentage(table);
+          resizePercentage(tableClone);
+        }
+      });
+
       // If we're updating the table width via the old mechanic, we need to update the constituent cells' widths/heights too.
       editor.on('ObjectResized', function (e) {
         var table = e.target;
         if (table.nodeName === 'TABLE') {
-          var newCellSizes = [];
-          Tools.each(table.rows, function (row) {
-            Tools.each(row.cells, function (cell) {
-              var width = editor.dom.getStyle(cell, 'width', true);
-              newCellSizes.push({
-                cell: cell,
-                width: width
-              });
-            });
-          });
-          Tools.each(newCellSizes, function (newCellSize) {
-            editor.dom.setStyle(newCellSize.cell, 'width', newCellSize.width);
-            editor.dom.setAttrib(newCellSize.cell, 'width', null);
-          });
+          adjustHeight(table, 0, 0);
+          adjustWidth(table, 0, 0);
         }
       });
 

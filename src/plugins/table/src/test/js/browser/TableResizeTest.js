@@ -351,7 +351,7 @@ asynctest(
       editor.plugins.table.resizeBars.adjustHeight(table, 50, 0);
 
       LegacyUnit.equal(editor.getContent(),
-        '<table border=\"1\">' +
+        '<table style=\"height: 110px;\" border=\"1\">' +
         '<tbody>' +
         '<tr style=\"height: 70px;\">' +
         '<th style=\"width: 20px; height: 70px;\">A0</th>' +
@@ -383,7 +383,7 @@ asynctest(
       editor.plugins.table.resizeBars.adjustHeight(table, 50, 1);
 
       LegacyUnit.equal(editor.getContent(),
-        '<table border=\"1\">' +
+        '<table style=\"height: 110px;\" border=\"1\">' +
         '<tbody>' +
         '<tr style=\"height: 20px;\">' +
         '<th style=\"width: 20px; height: 20px;\">A0</th>' +
@@ -415,7 +415,7 @@ asynctest(
       editor.plugins.table.resizeBars.adjustHeight(table, 50, 2);
 
       LegacyUnit.equal(editor.getContent(),
-        '<table border=\"1\">' +
+        '<table style=\"height: 110px;\" border=\"1\">' +
         '<tbody>' +
         '<tr style=\"height: 20px;\">' +
         '<th style=\"width: 20px; height: 20px;\">A0</th>' +
